@@ -2,7 +2,7 @@
 
 Aplicação pessoal de acompanhamento nutricional. **Seu esforço. Sua evolução.**
 
-Esta entrega contém a Fase 1: fundação Next.js, identidade visual, dashboard responsivo, autenticação preparada para Supabase, PWA instalável, esquema PostgreSQL com RLS e testes iniciais.
+O roadmap principal está implementado: autenticação, PWA, catálogo TACO/TBCA, registro manual e por voz, revisão obrigatória, metas, histórico editável, dashboard real, alimentos personalizados e modelos reutilizáveis.
 
 ## Como executar
 
@@ -22,6 +22,7 @@ Acesse `http://localhost:3000`. Sem credenciais do Supabase, o produto abre em m
 npm run lint
 npm run typecheck
 npm test
+npm run test:e2e
 npm run build
 ```
 
@@ -29,8 +30,14 @@ npm run build
 
 - `src/app`: páginas, layouts e Route Handlers.
 - `src/components`: componentes visuais por domínio.
-- `src/lib`: validações, utilidades e clientes Supabase.
+- `src/services`: cálculos nutricionais e regras de domínio.
+- `src/repositories`: acesso ao catálogo, metas e refeições.
+- `src/lib`: validações, autorização, utilidades e clientes Supabase.
 - `supabase/migrations`: esquema relacional e políticas RLS.
 - `docs/ARCHITECTURE.md`: arquitetura, riscos, custos e roadmap.
 
 As chaves privadas nunca devem usar o prefixo `NEXT_PUBLIC_`.
+
+Depois de conectar um projeto, aplique todas as migrations na ordem dos nomes. Elas incluem o catálogo versionado e funções transacionais que recalculam nutrientes no banco antes de salvar refeições ou modelos.
+
+Para habilitar voz, configure `ELEVENLABS_API_KEY` apenas no servidor. O áudio é limitado a 30 segundos, enviado diretamente para transcrição e descartado; somente texto, itens estruturados e métricas mínimas ficam registrados.

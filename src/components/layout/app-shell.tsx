@@ -9,6 +9,7 @@ import {
   Clock3,
   LayoutDashboard,
   Mic,
+  Rows3,
   Settings,
   Utensils,
 } from "lucide-react";
@@ -19,8 +20,11 @@ const navigation = [
   { href: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
   { href: "/meals", label: "Refeições", icon: Utensils },
   { href: "/history", label: "Histórico", icon: Clock3 },
+  { href: "/templates", label: "Modelos", icon: Rows3 },
   { href: "/settings", label: "Metas e ajustes", icon: Settings },
 ];
+
+const mobileNavigation = navigation.filter((item) => item.href !== "/templates");
 
 function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -89,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Seu esforço. Sua evolução.</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-brand/20 bg-brand-deep/30 px-3 py-1.5 text-[11px] font-medium text-brand sm:inline-flex">Dados demonstrativos</span>
+            <span className="hidden rounded-full border border-brand/20 bg-brand-deep/30 px-3 py-1.5 text-[11px] font-medium text-brand sm:inline-flex">Privado por padrão</span>
             <button className="relative grid size-10 place-items-center rounded-xl text-muted transition-colors hover:bg-white/5 hover:text-foreground" aria-label="Notificações">
               <Bell size={19} aria-hidden="true" />
               <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-brand" />
@@ -102,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-[#0c100e]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Navegação móvel">
         <div className="grid h-16 grid-cols-5 items-center px-2">
-          {navigation.slice(0, 2).map(({ href, label, icon: Icon }) => {
+          {mobileNavigation.slice(0, 2).map(({ href, label, icon: Icon }) => {
             const active = isCurrent(pathname, href);
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex h-full flex-col items-center justify-center gap-1 text-[10px]", active ? "text-brand" : "text-muted")}>
@@ -113,7 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/meals?mode=voice" aria-label="Registrar refeição por voz" className="mx-auto grid size-12 -translate-y-3 place-items-center rounded-2xl bg-brand text-[#07110c] shadow-[0_8px_28px_rgba(67,201,130,.2)]">
             <Mic size={22} strokeWidth={2.4} aria-hidden="true" />
           </Link>
-          {navigation.slice(2).map(({ href, label, icon: Icon }) => {
+          {mobileNavigation.slice(2).map(({ href, label, icon: Icon }) => {
             const active = isCurrent(pathname, href);
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex h-full flex-col items-center justify-center gap-1 text-[10px]", active ? "text-brand" : "text-muted")}>

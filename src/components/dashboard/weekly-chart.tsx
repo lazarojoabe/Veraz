@@ -2,17 +2,7 @@
 
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const data = [
-  { day: "Seg", value: 1870 },
-  { day: "Ter", value: 2130 },
-  { day: "Qua", value: 1960 },
-  { day: "Qui", value: 2240 },
-  { day: "Sex", value: 1748 },
-  { day: "Sáb", value: 2020 },
-  { day: "Dom", value: 2180 },
-];
-
-export function WeeklyChart() {
+export function WeeklyChart({ data }: { data: { day: string; value: number }[] }) {
   return (
     <div className="h-[200px] w-full" aria-label="Gráfico de calorias consumidas nos últimos sete dias">
       <ResponsiveContainer width="100%" height="100%">

@@ -49,7 +49,7 @@ O áudio será recebido pelo backend, limitado a 30 segundos, identificado por h
 | `meal_template_items` | Composição do modelo | Referencia alimentos vigentes; gera snapshot ao registrar |
 | `audio_transcriptions` | Auditoria mínima do processamento | Hash único por usuário, sem caminho de áudio persistente |
 
-Todas as tabelas expostas têm RLS, grants mínimos, políticas separadas por operação e índices nas colunas usadas pelas políticas. A migration inicial está em `supabase/migrations/20261106150000_initial_schema.sql`.
+Todas as tabelas expostas têm RLS, grants mínimos, políticas separadas por operação e índices nas colunas usadas pelas políticas. A migration inicial está em `supabase/migrations/20261106150000_initial_schema.sql`; o catálogo curado e a função transacional de refeições estão em `supabase/migrations/20261106220000_food_catalog_and_meal_rpc.sql`.
 
 ## Limites de módulos
 
@@ -83,7 +83,7 @@ components -> ações/páginas -> services ou Route Handlers (nunca SQL direto)
 | Timeout/custo da transcrição | falha ou cobrança repetida | áudio curto, hash idempotente, uma tentativa controlada e métricas de consumo |
 | Projeto Supabase gratuito pausado | indisponibilidade após inatividade | health check, aviso operacional e exportação/backup antes de produção real |
 | PWA offline com dado desatualizado | UX enganosa | cache apenas do fallback/ativos públicos, nunca páginas autenticadas; mutações exigem rede |
-| RLS incompleta | vazamento entre usuários | grants mínimos, políticas por operação e testes pgTAP na Fase 2 |
+| RLS incompleta | vazamento entre usuários | grants mínimos, políticas por operação e suíte pgTAP versionada |
 
 ## Custos e limites observados em novembro de 2026
 
@@ -96,10 +96,12 @@ Fontes oficiais: [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Supabase 
 
 ## Plano incremental
 
-1. **Fundação (entregue nesta versão):** Next.js/TypeScript/Tailwind, Supabase SSR, layout responsivo, identidade VERAZ, PWA, migration/RLS, health check e teste inicial.
-2. **Gestão nutricional:** repositórios, importação TACO/TBCA versionada, metas, registro manual, histórico real, edição/exclusão e testes de cálculo/RLS.
-3. **Voz:** captura até 30 s, endpoint idempotente, Scribe v2, parser validado, resolução nutricional e revisão obrigatória.
-4. **Dashboard:** trocar fixtures por agregações reais, gráficos e estados vazios/erro/carregamento.
-5. **Melhorias:** modelos de refeições, Playwright, pgTAP, telemetria de custo e otimizações.
+1. **Fundação (entregue):** Next.js/TypeScript/Tailwind, Supabase SSR, layout responsivo, identidade VERAZ, PWA, migrations/RLS e health check.
+2. **Gestão nutricional (entregue):** catálogo TACO/TBCA versionado, conversões explícitas, metas, alimentos personalizados, registro manual, revisão, edição, exclusão e testes de cálculo/RLS.
+3. **Voz (entregue):** captura até 30 s, limite de uso, hash idempotente, Scribe v2, parser em português, resolução nutricional, descarte do áudio e revisão obrigatória.
+4. **Dashboard (entregue):** agregações reais de metas, refeições, macros, últimos sete dias, sequência e estados vazios, com fallback demonstrativo.
+5. **Melhorias (entregue):** modelos reutilizáveis, Playwright desktop/móvel, pgTAP, telemetria estimada de custo e health check dos serviços.
+
+O funcionamento conectado depende apenas de aplicar as migrations e fornecer as variáveis do Supabase e ElevenLabs. Sem elas, a interface preserva um modo demonstrativo seguro e não simula persistência.
 
 Treinos, medidas corporais e evolução física deverão entrar como novos módulos do mesmo monólito, sem contaminar o domínio nutricional nem antecipar microsserviços.

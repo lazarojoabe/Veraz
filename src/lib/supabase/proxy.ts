@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig, isSupabaseConfigured } from "./config";
 
-const protectedPaths = ["/dashboard", "/meals", "/history", "/settings"];
+const protectedPaths = ["/dashboard", "/meals", "/history", "/templates", "/settings"];
 const authPaths = ["/login", "/signup"];
 
 function copyCookies(source: NextResponse, target: NextResponse) {
