@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Check, LoaderCircle, Mic, RotateCcw, ShieldCheck, Sparkles, Square, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, LoaderCircle, Mic, Plus, RotateCcw, Search, ShieldCheck, Sparkles, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { calculateMealItem, calculateMealTotals, getAvailableUnits } from "@/services/nutrition/calculations";
@@ -11,8 +11,15 @@ type VoiceLine = { key: string; food: FoodCatalogItem; quantity: number; unit: N
 
 const unitLabels: Record<NutritionUnit, string> = { g: "g", ml: "ml", unit: "unidade", portion: "porção" };
 
-function localDateTimeIso() {
-  return new Date().toISOString();
+const mealTypes = [
+  ["breakfast", "Café da manhã"], ["lunch", "Almoço"], ["snack", "Lanche"],
+  ["dinner", "Jantar"], ["supper", "Ceia"], ["other", "Outro"],
+] as const;
+
+function localDateTimeValue() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 16);
 }
 
 export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
@@ -26,12 +33,43 @@ export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
   const [lines, setLines] = useState<VoiceLine[]>([]);
   const [unresolved, setUnresolved] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [name, setName] = useState("Refeição por voz");
+  const [mealType, setMealType] = useState("other");
+  const [eatenAt, setEatenAt] = useState(localDateTimeValue);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<FoodCatalogItem[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const calculated = useMemo(
     () => lines.map((line) => calculateMealItem(line.food, { foodId: line.food.id, quantity: line.quantity, unit: line.unit })),
     [lines],
   );
   const totals = useMemo(() => calculateMealTotals(calculated), [calculated]);
+
+  useEffect(() => {
+    if (stage !== "review" || searchQuery.trim().length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const response = await fetch(`/api/nutrition?q=${encodeURIComponent(searchQuery)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error();
+        const payload = (await response.json()) as { foods: FoodCatalogItem[] };
+        setSearchResults(payload.foods);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setMessage("Não foi possível pesquisar o catálogo agora.");
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 220);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [searchQuery, stage]);
+
+  function addFood(food: FoodCatalogItem) {
+    setLines((current) => [...current, { key: crypto.randomUUID(), food, quantity: food.baseQuantity, unit: food.baseUnit, confidence: 1 }]);
+    setSearchQuery("");
+    setSearchResults([]);
+  }
 
   async function sendAudio(blob: Blob, durationSeconds: number) {
     setStage("transcribing");
@@ -105,9 +143,9 @@ export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Refeição por voz",
-          mealType: "other",
-          eatenAt: localDateTimeIso(),
+          name,
+          mealType,
+          eatenAt: new Date(eatenAt).toISOString(),
           notes: `Transcrição revisada: ${transcript}`,
           source: "voice",
           items: lines.map((line) => ({ foodId: line.food.id, quantity: line.quantity, unit: line.unit })),
@@ -129,6 +167,11 @@ export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
     setLines([]);
     setUnresolved([]);
     setMessage(null);
+    setName("Refeição por voz");
+    setMealType("other");
+    setEatenAt(localDateTimeValue());
+    setSearchQuery("");
+    setSearchResults([]);
   }
 
   if (stage === "review" || stage === "saved") {
@@ -137,7 +180,12 @@ export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
         <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">Revisão antes de salvar</p><h2 className="mt-2 text-xl font-semibold">O que entendemos</h2></div><Button variant="ghost" onClick={reset}><RotateCcw size={16} /> Regravar</Button></div>
         {message && <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${stage === "saved" ? "border-brand/25 bg-brand-deep/25 text-brand" : "border-danger/25 bg-danger/5 text-danger"}`}>{message}</div>}
         <div className="mt-5 rounded-xl border border-border bg-white/[0.025] p-4"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Transcrição</p><p className="mt-2 text-sm leading-6">“{transcript}”</p></div>
-        {unresolved.length > 0 && <div className="mt-4 rounded-xl border border-[#d5b764]/25 bg-[#d5b764]/5 px-4 py-3 text-xs text-[#d5b764]">Não encontramos com segurança: {unresolved.join(", ")}. Grave novamente ou adicione esses itens manualmente.</div>}
+        {unresolved.length > 0 && <div className="mt-4 rounded-xl border border-[#d5b764]/25 bg-[#d5b764]/5 px-4 py-3 text-xs text-[#d5b764]">Não encontramos com segurança: {unresolved.join(", ")}. Grave novamente ou pesquise os itens corretos abaixo.</div>}
+        <fieldset disabled={stage === "saved"} className="mt-5 grid gap-3 sm:grid-cols-2 disabled:opacity-70">
+          <label className="text-xs text-muted">Nome<input value={name} maxLength={100} onChange={(event) => setName(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-border bg-white/[0.025] px-3 text-sm text-foreground outline-none focus:border-brand/40" /></label>
+          <label className="text-xs text-muted">Tipo<select value={mealType} onChange={(event) => setMealType(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-border bg-surface-raised px-3 text-sm text-foreground outline-none focus:border-brand/40">{mealTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="text-xs text-muted sm:col-span-2">Data e hora<input type="datetime-local" value={eatenAt} onChange={(event) => setEatenAt(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-border bg-white/[0.025] px-3 text-sm text-foreground outline-none focus:border-brand/40" /></label>
+        </fieldset>
         <div className="mt-5 space-y-3">
           {lines.map((line, index) => (
             <div key={line.key} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-[1fr_9rem_8rem_auto] sm:items-center">
@@ -148,8 +196,9 @@ export function VoiceMealRecorder({ enabled }: { enabled: boolean }) {
             </div>
           ))}
         </div>
+        {stage === "review" && <div className="mt-5 rounded-xl border border-border p-4"><p className="text-xs font-medium">Corrigir ou adicionar alimento</p><p className="mt-1 text-[11px] text-muted">Remova identificações incorretas acima e pesquise o item correto.</p><label className="mt-3 flex h-11 items-center gap-2 rounded-xl border border-border bg-white/[0.025] px-3 focus-within:border-brand/40"><Search size={16} className="text-muted" /><input value={searchQuery} onChange={(event) => { const value = event.target.value; setSearchQuery(value); if (value.trim().length < 2) setSearchResults([]); }} placeholder="Buscar no catálogo TACO/TBCA" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />{searching && <LoaderCircle size={15} className="animate-spin text-brand" />}</label>{searchResults.length > 0 && <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">{searchResults.map((food) => <button key={food.id} type="button" onClick={() => addFood(food)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs hover:bg-white/5"><Plus size={14} className="text-brand" /><span className="min-w-0 flex-1 truncate">{food.name}</span><span className="text-muted">{Math.round(food.calories)} kcal/{food.baseQuantity}{unitLabels[food.baseUnit]}</span></button>)}</div>}</div>}
         <div className="mt-5 grid grid-cols-4 gap-2 rounded-xl bg-brand-deep/30 p-4 text-center"><Metric label="Calorias" value={totals.calories} unit="kcal" /><Metric label="Proteínas" value={totals.proteinG} /><Metric label="Carbos" value={totals.carbohydratesG} /><Metric label="Gorduras" value={totals.fatG} /></div>
-        {stage !== "saved" && <div className="mt-5 flex justify-end"><Button onClick={save} disabled={!lines.length}><Check size={17} /> Confirmar e salvar</Button></div>}
+        {stage !== "saved" && <div className="mt-5 flex justify-end"><Button onClick={save} disabled={!lines.length || !name.trim() || !eatenAt}><Check size={17} /> Confirmar e salvar</Button></div>}
       </Card>
     );
   }

@@ -10,8 +10,15 @@ export type ParsedTranscriptItem = {
 
 const wordNumbers: Record<string, number> = {
   um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6,
-  sete: 7, oito: 8, nove: 9, dez: 10,
+  sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13,
+  quatorze: 14, quinze: 15, dezesseis: 16, dezessete: 17, dezoito: 18,
+  dezenove: 19, vinte: 20, meio: 0.5, meia: 0.5,
 };
+
+const quantityPattern = Object.keys(wordNumbers).sort((a, b) => b.length - a.length).join("|");
+const itemPattern = new RegExp(
+  `^(${quantityPattern}|\\d+(?:[.,]\\d+)?)\\s*(quilogramas|quilograma|mililitros|mililitro|unidades|unidade|gramas|grama|quilos|quilo|porcoes|porcao|kg|ml|g)?\\s*(?:de\\s+)?(.*)$`,
+);
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/[^a-z0-9,. ]/g, " ").replace(/\s+/g, " ").trim();
@@ -53,6 +60,7 @@ function matchFood(description: string, foods: FoodCatalogItem[]) {
 
 export function parseMealTranscript(transcript: string, foods: FoodCatalogItem[]) {
   const segments = normalize(transcript)
+    .replace(/(\d),(\d)/g, "$1.$2")
     .split(/\s+(?:e|mais)\s+|[,;]/)
     .map((segment) => segment.trim())
     .filter(Boolean);
@@ -60,20 +68,21 @@ export function parseMealTranscript(transcript: string, foods: FoodCatalogItem[]
   const unresolved: string[] = [];
 
   for (const segment of segments) {
-    const match = segment.match(/^(\d+(?:[.,]\d+)?|uma|um|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)\s*(quilogramas|quilograma|mililitros|mililitro|unidades|unidade|gramas|grama|quilos|quilo|porcoes|porcao|ovos|ovo|kg|ml|g)?\s*(?:de\s+)?(.*)$/);
+    const cleaned = segment.replace(/^(?:(?:eu\s+)?(?:comi|consumi|ingeri|tomei|bebi)|tambem)\s+/, "");
+    const match = cleaned.match(itemPattern);
     if (!match) {
       unresolved.push(segment);
       continue;
     }
     const quantity = parseQuantity(match[1]);
     const description = match[3] || match[2] || "";
-    const inferredUnit = match[2] ?? (/^ovos?\b/.test(description) ? "ovos" : undefined);
-    const converted = unitFromSpeech(inferredUnit, quantity);
     const candidate = matchFood(description, foods);
     if (!Number.isFinite(quantity) || quantity <= 0 || !candidate || candidate.score <= 0) {
       unresolved.push(segment);
       continue;
     }
+    const inferredUnit = match[2] ?? (candidate.food.gramsPerUnit !== null ? "unidade" : undefined);
+    const converted = unitFromSpeech(inferredUnit, quantity);
     items.push({
       foodId: candidate.food.id,
       quantity: converted.quantity,

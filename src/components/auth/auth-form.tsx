@@ -8,12 +8,13 @@ import type { AuthActionState } from "@/lib/validations/auth";
 
 type Action = (state: AuthActionState, formData: FormData) => Promise<AuthActionState>;
 
-export function AuthForm({ mode, action }: { mode: "login" | "signup"; action: Action }) {
+export function AuthForm({ mode, action, nextPath }: { mode: "login" | "signup"; action: Action; nextPath?: string }) {
   const [state, formAction, pending] = useActionState(action, null);
   const isSignup = mode === "signup";
 
   return (
     <form action={formAction} className="mt-8 space-y-4">
+      {!isSignup && nextPath && <input type="hidden" name="next" value={nextPath} />}
       {isSignup && (
         <Field name="name" label="Nome" type="text" placeholder="Como podemos chamar você?" icon={UserRound} error={state?.fieldErrors?.name?.[0]} autoComplete="name" />
       )}

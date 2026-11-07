@@ -2,13 +2,13 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerUserId } from "@/lib/auth/server-user";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getFoodsByIds, searchFoods } from "@/repositories/foods.repository";
+import { getFoodsByIds, listFoodsForMatching } from "@/repositories/foods.repository";
 import {
   completeTranscription,
   canStartTranscription,
   failTranscription,
   findCompletedTranscription,
-  startTranscription,
+  claimTranscription,
 } from "@/repositories/transcriptions.repository";
 import { transcribeWithElevenLabs } from "@/services/transcription/elevenlabs";
 import { parseMealTranscript, type ParsedTranscriptItem } from "@/services/transcription/parse-meal-transcript";
@@ -55,9 +55,18 @@ export async function POST(request: NextRequest) {
 
   let auditId: string | null = null;
   try {
-    auditId = await startTranscription(userId, hash, duration, file.size);
+    const claim = await claimTranscription(userId, hash, duration, file.size);
+    if (!claim.claimed) {
+      if (claim.status === "completed" && claim.transcript && claim.structuredItems) {
+        const structured = claim.structuredItems as StructuredItems;
+        const foods = await getFoodsByIds(structured.items.map((item) => item.foodId));
+        return NextResponse.json({ transcript: claim.transcript, ...structured, foods, cached: true });
+      }
+      return NextResponse.json({ error: "transcription_in_progress", message: "Este áudio já está sendo processado. Aguarde alguns instantes." }, { status: 409 });
+    }
+    auditId = claim.id;
     const transcript = await transcribeWithElevenLabs(new File([bytes], file.name, { type: file.type }));
-    const catalog = await searchFoods("");
+    const catalog = await listFoodsForMatching();
     const structured = parseMealTranscript(transcript.text, catalog);
     await completeTranscription(auditId, transcript.text, structured, duration);
     const foods = catalog.filter((food) => structured.items.some((item) => item.foodId === food.id));

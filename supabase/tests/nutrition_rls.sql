@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(13);
 
 select has_table('public', 'foods', 'foods exists');
 select has_table('public', 'meals', 'meals exists');
@@ -15,6 +15,7 @@ select ok((select relrowsecurity from pg_class where oid = 'public.audio_transcr
 
 select has_function('public', 'create_meal_with_items', array['text', 'text', 'timestamp with time zone', 'text', 'jsonb'], 'transactional meal RPC exists');
 select has_function('public', 'create_meal_from_template', array['uuid'], 'template RPC exists');
+select has_function('public', 'replace_meal_with_items', array['uuid', 'text', 'text', 'timestamp with time zone', 'text', 'jsonb'], 'meal editing RPC exists');
 
 select * from finish();
 rollback;

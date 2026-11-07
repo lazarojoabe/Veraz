@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { cn } from "@/lib/utils";
+import { demoDashboard } from "@/data/dashboard";
+import type { DashboardData } from "@/types/dashboard";
 
 const navigation = [
   { href: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
@@ -30,8 +33,26 @@ function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("pt-BR") || "V";
+}
+
+export function AppShell({ children, connected }: { children: React.ReactNode; connected: boolean }) {
   const pathname = usePathname();
+  const [summary, setSummary] = useState({ displayName: connected ? "Você" : demoDashboard.displayName, streak: connected ? 0 : demoDashboard.streak });
+
+  useEffect(() => {
+    if (!connected) return;
+    const controller = new AbortController();
+    void fetch("/api/dashboard", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error();
+        return response.json() as Promise<DashboardData>;
+      })
+      .then((data) => setSummary({ displayName: data.displayName, streak: data.streak }))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [connected]);
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
@@ -66,20 +87,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <CalendarDays className="text-brand" size={16} aria-hidden="true" />
           </div>
           <div className="flex items-end gap-2">
-            <strong className="text-3xl font-semibold tracking-tight">12</strong>
+            <strong className="text-3xl font-semibold tracking-tight">{summary.streak}</strong>
             <span className="pb-1 text-xs text-muted">dias registrando</span>
           </div>
-          <div className="mt-4 flex gap-1.5" aria-label="Cinco dos últimos sete dias registrados">
-            {[true, true, true, true, true, false, false].map((done, index) => (
+          <div className="mt-4 flex gap-1.5" aria-label={`${Math.min(summary.streak, 7)} dos últimos sete dias registrados`}>
+            {Array.from({ length: 7 }, (_, index) => index < Math.min(summary.streak, 7)).map((done, index) => (
               <span key={index} className={cn("h-1 flex-1 rounded-full", done ? "bg-brand" : "bg-white/10")} />
             ))}
           </div>
         </div>
 
         <Link href="/settings" className="mt-4 flex items-center gap-3 rounded-xl p-2 hover:bg-white/[0.035]">
-          <span className="grid size-9 place-items-center rounded-full bg-[#26332c] text-xs font-bold text-brand">LS</span>
+          <span className="grid size-9 place-items-center rounded-full bg-[#26332c] text-xs font-bold text-brand">{initials(summary.displayName)}</span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">Lazar</span>
+            <span className="block truncate text-sm font-medium">{summary.displayName}</span>
             <span className="block text-xs text-muted">Conta pessoal</span>
           </span>
           <ChevronRight size={15} className="text-muted" aria-hidden="true" />

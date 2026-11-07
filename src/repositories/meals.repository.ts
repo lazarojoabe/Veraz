@@ -14,6 +14,15 @@ export type MealSummary = {
   carbohydratesG: number;
   fatG: number;
   itemCount: number;
+  items: Array<{
+    foodName: string;
+    quantity: number;
+    unit: MealInput["items"][number]["unit"];
+    calories: number;
+    proteinG: number;
+    carbohydratesG: number;
+    fatG: number;
+  }>;
 };
 
 type MealRow = {
@@ -25,7 +34,16 @@ type MealRow = {
   protein_total_g: number | string;
   carbohydrates_total_g: number | string;
   fat_total_g: number | string;
-  meal_items: { count: number }[];
+  meal_items: Array<{
+    food_name: string;
+    quantity: number | string;
+    unit: MealInput["items"][number]["unit"];
+    calories: number | string;
+    protein_g: number | string;
+    carbohydrates_g: number | string;
+    fat_g: number | string;
+    position: number;
+  }>;
 };
 
 export async function createMeal(input: MealInput) {
@@ -99,14 +117,18 @@ export async function getMeal(userId: string, mealId: string) {
   };
 }
 
-export async function listMeals(userId: string, limit = 30): Promise<MealSummary[]> {
+export async function listMeals(
+  userId: string,
+  options: { limit?: number; since?: string } = {},
+): Promise<MealSummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let request = supabase
     .from("meals")
-    .select("id,name,meal_type,eaten_at,calories_total,protein_total_g,carbohydrates_total_g,fat_total_g,meal_items(count)")
+    .select("id,name,meal_type,eaten_at,calories_total,protein_total_g,carbohydrates_total_g,fat_total_g,meal_items(food_name,quantity,unit,calories,protein_g,carbohydrates_g,fat_g,position)")
     .eq("user_id", userId)
-    .order("eaten_at", { ascending: false })
-    .limit(limit);
+    .order("eaten_at", { ascending: false });
+  if (options.since) request = request.gte("eaten_at", options.since);
+  const { data, error } = await request.limit(options.limit ?? 100);
 
   if (error) throw new Error("Não foi possível carregar o histórico.");
 
@@ -119,7 +141,16 @@ export async function listMeals(userId: string, limit = 30): Promise<MealSummary
     proteinG: Number(row.protein_total_g),
     carbohydratesG: Number(row.carbohydrates_total_g),
     fatG: Number(row.fat_total_g),
-    itemCount: row.meal_items[0]?.count ?? 0,
+    itemCount: row.meal_items.length,
+    items: [...row.meal_items].sort((a, b) => a.position - b.position).map((item) => ({
+      foodName: item.food_name,
+      quantity: Number(item.quantity),
+      unit: item.unit,
+      calories: Number(item.calories),
+      proteinG: Number(item.protein_g),
+      carbohydratesG: Number(item.carbohydrates_g),
+      fatG: Number(item.fat_g),
+    })),
   }));
 }
 

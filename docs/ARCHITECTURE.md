@@ -49,7 +49,7 @@ O áudio será recebido pelo backend, limitado a 30 segundos, identificado por h
 | `meal_template_items` | Composição do modelo | Referencia alimentos vigentes; gera snapshot ao registrar |
 | `audio_transcriptions` | Auditoria mínima do processamento | Hash único por usuário, sem caminho de áudio persistente |
 
-Todas as tabelas expostas têm RLS, grants mínimos, políticas separadas por operação e índices nas colunas usadas pelas políticas. A migration inicial está em `supabase/migrations/20261106150000_initial_schema.sql`; o catálogo curado e a função transacional de refeições estão em `supabase/migrations/20261106220000_food_catalog_and_meal_rpc.sql`.
+Todas as tabelas expostas têm RLS, grants mínimos, políticas separadas por operação e índices nas colunas usadas pelas políticas. A migration inicial está em `supabase/migrations/20261106150000_initial_schema.sql`; o catálogo curado e a função transacional de refeições estão em `supabase/migrations/20261106220000_food_catalog_and_meal_rpc.sql`; a edição que preserva a identidade do registro está em `supabase/migrations/20261107120000_preserve_meal_id_on_edit.sql`.
 
 ## Limites de módulos
 
@@ -100,7 +100,9 @@ Fontes oficiais: [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Supabase 
 2. **Gestão nutricional (entregue):** catálogo TACO/TBCA versionado, conversões explícitas, metas, alimentos personalizados, registro manual, revisão, edição, exclusão e testes de cálculo/RLS.
 3. **Voz (entregue):** captura até 30 s, limite de uso, hash idempotente, Scribe v2, parser em português, resolução nutricional, descarte do áudio e revisão obrigatória.
 4. **Dashboard (entregue):** agregações reais de metas, refeições, macros, últimos sete dias, sequência e estados vazios, com fallback demonstrativo.
-5. **Melhorias (entregue):** modelos reutilizáveis, Playwright desktop/móvel, pgTAP, telemetria estimada de custo e health check dos serviços.
+5. **Melhorias (entregue):** modelos reutilizáveis, histórico filtrável e detalhado, Playwright desktop/móvel, pgTAP, telemetria visível de uso/custo e health check dos serviços.
+
+A matriz de rastreabilidade entre requisitos e evidências está em `docs/ROADMAP.md`.
 
 O funcionamento conectado depende apenas de aplicar as migrations e fornecer as variáveis do Supabase e ElevenLabs. Sem elas, a interface preserva um modo demonstrativo seguro e não simula persistência.
 

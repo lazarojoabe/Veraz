@@ -1,18 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getGoals } from "@/repositories/goals.repository";
 import type { DashboardData } from "@/types/dashboard";
-
-const timezone = "America/Sao_Paulo";
-
-function dayKey(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-}
+import { addDaysToDayKey, appDayKey, appDayKeyOffset, dayKeyAsDate, formatAppDate, startOfAppDayIso } from "@/lib/dates/app-timezone";
 
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const supabase = await createClient();
-  const start = new Date();
-  start.setDate(start.getDate() - 6);
-  start.setHours(0, 0, 0, 0);
+  const firstDay = appDayKeyOffset(-6);
 
   const [{ data: profile }, goals, mealsResult] = await Promise.all([
     supabase.from("profiles").select("display_name").eq("id", userId).single(),
@@ -21,7 +14,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       .from("meals")
       .select("id,name,eaten_at,calories_total,protein_total_g,carbohydrates_total_g,fat_total_g,meal_items(food_name,position)")
       .eq("user_id", userId)
-      .gte("eaten_at", start.toISOString())
+      .gte("eaten_at", startOfAppDayIso(firstDay))
       .order("eaten_at", { ascending: true }),
   ]);
   if (mealsResult.error) throw new Error("Não foi possível carregar o dashboard.");
@@ -33,27 +26,25 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     meal_items: { food_name: string; position: number }[];
   };
   const rows = mealsResult.data as Row[];
-  const today = dayKey(new Date());
-  const todayRows = rows.filter((meal) => dayKey(new Date(meal.eaten_at)) === today);
+  const today = appDayKey(new Date());
+  const todayRows = rows.filter((meal) => appDayKey(meal.eaten_at) === today);
   const sum = (key: "calories_total" | "protein_total_g" | "carbohydrates_total_g" | "fat_total_g") =>
     todayRows.reduce((total, row) => total + Number(row[key]), 0);
 
   const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
-    const key = dayKey(date);
+    const key = addDaysToDayKey(firstDay, index);
     return {
-      day: new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: timezone }).format(date).replace(".", ""),
+      day: formatAppDate(dayKeyAsDate(key), { weekday: "short" }).replace(".", ""),
       key,
-      value: rows.filter((meal) => dayKey(new Date(meal.eaten_at)) === key).reduce((total, meal) => total + Number(meal.calories_total), 0),
+      value: rows.filter((meal) => appDayKey(meal.eaten_at) === key).reduce((total, meal) => total + Number(meal.calories_total), 0),
     };
   });
-  const recordedDays = new Set(rows.map((meal) => dayKey(new Date(meal.eaten_at))));
+  const recordedDays = new Set(rows.map((meal) => appDayKey(meal.eaten_at)));
   let streak = 0;
-  const cursor = new Date();
-  while (recordedDays.has(dayKey(cursor))) {
+  let cursor = today;
+  while (recordedDays.has(cursor)) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = addDaysToDayKey(cursor, -1);
   }
 
   return {

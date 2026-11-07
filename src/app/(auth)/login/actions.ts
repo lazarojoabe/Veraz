@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { loginSchema, type AuthActionState } from "@/lib/validations/auth";
+import { loginSchema, safeAppRedirect, type AuthActionState } from "@/lib/validations/auth";
 
 export async function login(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
   if (!isSupabaseConfigured()) {
@@ -17,5 +17,5 @@ export async function login(_: AuthActionState, formData: FormData): Promise<Aut
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "E-mail ou senha incorretos." };
 
-  redirect("/dashboard");
+  redirect(safeAppRedirect(formData.get("next")));
 }

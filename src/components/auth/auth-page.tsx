@@ -6,7 +6,7 @@ import type { AuthActionState } from "@/lib/validations/auth";
 
 type Action = (state: AuthActionState, formData: FormData) => Promise<AuthActionState>;
 
-export function AuthPage({ mode, action, notice }: { mode: "login" | "signup"; action: Action; notice?: string }) {
+export function AuthPage({ mode, action, notice, nextPath }: { mode: "login" | "signup"; action: Action; notice?: string; nextPath?: string }) {
   const isSignup = mode === "signup";
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
@@ -32,7 +32,7 @@ export function AuthPage({ mode, action, notice }: { mode: "login" | "signup"; a
           <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{isSignup ? "Crie sua conta" : "Acesse seu progresso"}</h2>
           <p className="mt-3 text-sm leading-6 text-muted">{isSignup ? "Sua jornada começa com dados honestos e consistentes." : "Continue de onde parou, sem perder o ritmo."}</p>
           {notice && <p className="mt-5 rounded-xl border border-brand/20 bg-brand-deep/30 px-3 py-2.5 text-sm leading-6 text-brand">{notice}</p>}
-          <AuthForm mode={mode} action={action} />
+          <AuthForm mode={mode} action={action} nextPath={nextPath} />
           <div className="mt-8 border-t border-border pt-5 text-center"><Link href="/dashboard" className="text-xs text-muted hover:text-foreground">Explorar demonstração sem conta</Link></div>
         </div>
       </section>

@@ -103,3 +103,15 @@ export async function getFoodsByIds(ids: string[]) {
   if (error) throw new Error("Não foi possível carregar os alimentos.");
   return (data as FoodRow[]).map(mapFood);
 }
+
+export async function listFoodsForMatching(limit = 1000) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("foods")
+    .select(columns)
+    .eq("is_active", true)
+    .order("name")
+    .limit(limit);
+  if (error) throw new Error("Não foi possível carregar o catálogo para transcrição.");
+  return (data as FoodRow[]).map(mapFood);
+}

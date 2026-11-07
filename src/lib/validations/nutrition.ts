@@ -48,3 +48,5 @@ export const mealTemplateSchema = z.object({
   description: z.string().trim().max(500).default(""),
   items: mealInputSchema.shape.items,
 });
+
+export const historyPeriodSchema = z.enum(["7", "30", "90"]).transform(Number);

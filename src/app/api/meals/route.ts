@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerUserId } from "@/lib/auth/server-user";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { mealCreationSchema } from "@/lib/validations/nutrition";
+import { historyPeriodSchema } from "@/lib/validations/nutrition";
+import { appDayKeyOffset, startOfAppDayIso } from "@/lib/dates/app-timezone";
 import { createMeal, createVoiceMeal, listMeals } from "@/repositories/meals.repository";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const period = historyPeriodSchema.safeParse(request.nextUrl.searchParams.get("period") ?? "7");
+  if (!period.success) return NextResponse.json({ error: "invalid_history_period" }, { status: 400 });
   if (!isSupabaseConfigured()) return NextResponse.json({ meals: [], mode: "demo" });
   const userId = await getServerUserId();
   if (!userId) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
 
   try {
-    return NextResponse.json({ meals: await listMeals(userId), mode: "connected" });
+    const since = startOfAppDayIso(appDayKeyOffset(-(period.data - 1)));
+    return NextResponse.json({ meals: await listMeals(userId, { limit: 500, since }), mode: "connected" });
   } catch {
     return NextResponse.json({ error: "history_unavailable" }, { status: 500 });
   }
