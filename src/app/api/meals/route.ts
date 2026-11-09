@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { mealCreationSchema } from "@/lib/validations/nutrition";
 import { historyPeriodSchema } from "@/lib/validations/nutrition";
 import { appDayKeyOffset, startOfAppDayIso } from "@/lib/dates/app-timezone";
-import { createMeal, createVoiceMeal, listMeals } from "@/repositories/meals.repository";
+import { createMeal, createPhotoMeal, createVoiceMeal, listMeals } from "@/repositories/meals.repository";
 
 export async function GET(request: NextRequest) {
   const period = historyPeriodSchema.safeParse(request.nextUrl.searchParams.get("period") ?? "7");
@@ -38,7 +38,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const id = parsed.data.source === "voice" ? await createVoiceMeal(parsed.data) : await createMeal(parsed.data);
+    const id = parsed.data.source === "voice"
+      ? await createVoiceMeal(parsed.data)
+      : parsed.data.source === "photo"
+        ? await createPhotoMeal(parsed.data)
+        : await createMeal(parsed.data);
     return NextResponse.json({ id }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "meal_save_failed" }, { status: 500 });

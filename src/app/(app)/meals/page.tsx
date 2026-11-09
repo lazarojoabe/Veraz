@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { AudioLines, Keyboard } from "lucide-react";
+import { AudioLines, Camera, Keyboard } from "lucide-react";
 import { ManualMealBuilder } from "@/components/meals/manual-meal-builder";
+import { PhotoMealAnalyzer } from "@/components/meals/photo-meal-analyzer";
 import { VoiceMealRecorder } from "@/components/meals/voice-meal-recorder";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,7 @@ export const instant = false;
 
 export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
   const params = await searchParams;
-  const mode = params.mode === "manual" ? "manual" : "voice";
+  const mode = params.mode === "manual" ? "manual" : params.mode === "photo" ? "photo" : "voice";
   const editId = typeof params.edit === "string" ? params.edit : undefined;
 
   return (
@@ -21,12 +22,17 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
         <p className="mt-2 text-sm text-muted">Escolha a forma mais simples para registrar o que você comeu.</p>
       </header>
 
-      <div className="grid grid-cols-2 rounded-xl border border-border bg-surface p-1">
+      <div className="grid grid-cols-3 rounded-xl border border-border bg-surface p-1">
         <Link href="/meals?mode=voice" className={cn("flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors", mode === "voice" ? "bg-brand-deep text-brand" : "text-muted hover:text-foreground")}><AudioLines size={17} /> Por voz</Link>
+        <Link href="/meals?mode=photo" className={cn("flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors", mode === "photo" ? "bg-brand-deep text-brand" : "text-muted hover:text-foreground")}><Camera size={17} /> Por foto</Link>
         <Link href="/meals?mode=manual" className={cn("flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors", mode === "manual" ? "bg-brand-deep text-brand" : "text-muted hover:text-foreground")}><Keyboard size={17} /> Manual</Link>
       </div>
 
-      {mode === "voice" ? <VoiceMealRecorder enabled={isSupabaseConfigured() && Boolean(process.env.ELEVENLABS_API_KEY)} /> : <ManualMealBuilder connected={isSupabaseConfigured()} editId={editId} />}
+      {mode === "voice"
+        ? <VoiceMealRecorder enabled={isSupabaseConfigured() && Boolean(process.env.ELEVENLABS_API_KEY)} />
+        : mode === "photo"
+          ? <PhotoMealAnalyzer enabled={isSupabaseConfigured() && Boolean(process.env.OPENAI_API_KEY)} />
+          : <ManualMealBuilder connected={isSupabaseConfigured()} editId={editId} />}
     </div>
   );
 }

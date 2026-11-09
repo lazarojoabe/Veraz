@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const mocks = vi.hoisted(() => ({ listMeals: vi.fn(), createMeal: vi.fn(), createVoiceMeal: vi.fn() }));
+const mocks = vi.hoisted(() => ({ listMeals: vi.fn(), createMeal: vi.fn(), createVoiceMeal: vi.fn(), createPhotoMeal: vi.fn() }));
 
 vi.mock("@/lib/supabase/config", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/auth/server-user", () => ({ getServerUserId: () => Promise.resolve("10000000-0000-4000-8000-000000000099") }));
@@ -9,6 +9,7 @@ vi.mock("@/repositories/meals.repository", () => ({
   listMeals: mocks.listMeals,
   createMeal: mocks.createMeal,
   createVoiceMeal: mocks.createVoiceMeal,
+  createPhotoMeal: mocks.createPhotoMeal,
 }));
 
 import { GET, POST } from "./route";
@@ -53,5 +54,18 @@ describe("GET /api/meals", () => {
     expect(response.status).toBe(201);
     expect(mocks.createMeal).toHaveBeenCalledWith(mealPayload);
     expect(mocks.createVoiceMeal).not.toHaveBeenCalled();
+  });
+
+  it("preserva a origem da refeição analisada por foto", async () => {
+    mocks.createPhotoMeal.mockResolvedValue("20000000-0000-4000-8000-000000000002");
+    const request = new NextRequest("http://localhost/api/meals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...mealPayload, source: "photo" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(201);
+    expect(mocks.createPhotoMeal).toHaveBeenCalledWith({ ...mealPayload, source: "photo" });
+    expect(mocks.createMeal).not.toHaveBeenCalled();
   });
 });

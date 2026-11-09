@@ -21,7 +21,7 @@ export const mealInputSchema = z.object({
 });
 
 export const mealCreationSchema = mealInputSchema.extend({
-  source: z.enum(["manual", "voice"]).default("manual"),
+  source: z.enum(["manual", "voice", "photo"]).default("manual"),
 });
 
 export const nutritionGoalsSchema = z.object({

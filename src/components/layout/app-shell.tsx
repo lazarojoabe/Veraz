@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronRight,
   Clock3,
+  Dumbbell,
   LayoutDashboard,
   Mic,
   Rows3,
@@ -24,10 +25,11 @@ const navigation = [
   { href: "/meals", label: "Refeições", icon: Utensils },
   { href: "/history", label: "Histórico", icon: Clock3 },
   { href: "/templates", label: "Modelos", icon: Rows3 },
+  { href: "/training", label: "Treinos", icon: Dumbbell },
   { href: "/settings", label: "Metas e ajustes", icon: Settings },
 ];
 
-const mobileNavigation = navigation.filter((item) => item.href !== "/templates");
+const mobileNavigation = navigation.filter((item) => ["/dashboard", "/meals", "/training", "/settings"].includes(item.href));
 
 function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -60,7 +62,7 @@ export function AppShell({ children, connected }: { children: React.ReactNode; c
         <Brand className="h-12 px-2" />
 
         <nav className="mt-10 space-y-1" aria-label="Navegação principal">
-          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted/65">Nutrição</p>
+          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted/65">Seu acompanhamento</p>
           {navigation.map(({ href, label, icon: Icon }) => {
             const active = isCurrent(pathname, href);
             return (

@@ -73,6 +73,19 @@ export async function createVoiceMeal(input: MealInput) {
   return data as string;
 }
 
+export async function createPhotoMeal(input: MealInput) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_photo_meal_with_items", {
+    p_name: input.name,
+    p_meal_type: input.mealType,
+    p_eaten_at: input.eatenAt,
+    p_notes: input.notes,
+    p_items: input.items,
+  });
+  if (error) throw new Error("Não foi possível salvar a refeição analisada por foto.");
+  return data as string;
+}
+
 export async function replaceMeal(userId: string, mealId: string, input: MealInput) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("replace_meal_with_items", {
