@@ -1,4 +1,4 @@
-import { Camera, Database, LogIn, LogOut, Mic, Rows3, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Camera, Database, LogIn, LogOut, Mic, Rows3, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import Link from "next/link";
 import { GoalsForm } from "@/components/settings/goals-form";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logout } from "./actions";
 import { TranscriptionUsageCard } from "@/components/settings/transcription-usage";
 import { PhotoAnalysisMetrics } from "@/components/settings/photo-analysis-metrics";
+import { AccountRoleCard } from "@/components/settings/account-role-card";
 
 const demoGoals = { calories: 2300, proteinG: 150, carbohydratesG: 240, fatG: 70 };
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-4xl space-y-7">
       <header><p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand">Personalização</p><h1 className="text-3xl font-semibold tracking-[-0.04em]">Metas e ajustes</h1><p className="mt-2 text-sm text-muted">Prepare o VERAZ para acompanhar a sua rotina.</p></header>
       <section><div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={17} className="text-brand" /><h2 className="text-sm font-semibold">Metas diárias</h2></div><GoalsForm initialGoals={demoGoals} connected={configured} /></section>
+      <section><div className="mb-3 flex items-center gap-2"><Users size={17} className="text-brand" /><h2 className="text-sm font-semibold">Perfil e acompanhamento</h2></div><AccountRoleCard connected={configured} /></section>
       <section><div className="mb-3 flex items-center gap-2"><Database size={17} className="text-brand" /><h2 className="text-sm font-semibold">Serviços</h2></div><Card className="divide-y divide-border overflow-hidden"><Service icon={ShieldCheck} name="Supabase" description="Autenticação, banco e segurança por usuário" active={configured} /><Service icon={Mic} name="ElevenLabs Scribe v2" description="Transcrição em português, sem guardar o áudio" active={transcriptionConfigured} /><Service icon={Camera} name="OpenAI Vision" description="Estimativa assistida de alimentos e porções, sem guardar a foto" active={photoAnalysisConfigured} /></Card></section>
       <section><div className="mb-3 flex items-center gap-2"><Mic size={17} className="text-brand" /><h2 className="text-sm font-semibold">Consumo da transcrição</h2></div><TranscriptionUsageCard connected={configured} /></section>
       <section><div className="mb-3 flex items-center gap-2"><Camera size={17} className="text-brand" /><h2 className="text-sm font-semibold">Avaliação da análise por foto</h2></div><PhotoAnalysisMetrics enabled={configured && photoAnalysisConfigured} /></section>

@@ -10,9 +10,12 @@ import {
   Clock3,
   Dumbbell,
   LayoutDashboard,
+  LineChart,
   Mic,
   Rows3,
   Settings,
+  Trophy,
+  Users,
   Utensils,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
@@ -26,10 +29,13 @@ const navigation = [
   { href: "/history", label: "Histórico", icon: Clock3 },
   { href: "/templates", label: "Modelos", icon: Rows3 },
   { href: "/training", label: "Treinos", icon: Dumbbell },
+  { href: "/progress", label: "Evolução", icon: LineChart },
+  { href: "/challenges", label: "Desafios", icon: Trophy },
+  { href: "/coach", label: "Área do coach", icon: Users },
   { href: "/settings", label: "Metas e ajustes", icon: Settings },
 ];
 
-const mobileNavigation = navigation.filter((item) => ["/dashboard", "/meals", "/training", "/settings"].includes(item.href));
+const mobileNavigation = navigation.filter((item) => ["/dashboard", "/meals", "/training", "/challenges"].includes(item.href));
 
 function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -144,7 +150,7 @@ export function AppShell({ children, connected }: { children: React.ReactNode; c
             const active = isCurrent(pathname, href);
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex h-full flex-col items-center justify-center gap-1 text-[10px]", active ? "text-brand" : "text-muted")}>
-                <Icon size={19} aria-hidden="true" /><span>{label === "Metas e ajustes" ? "Ajustes" : label}</span>
+                <Icon size={19} aria-hidden="true" /><span>{label === "Visão geral" ? "Início" : label}</span>
               </Link>
             );
           })}

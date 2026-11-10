@@ -41,6 +41,16 @@ As chaves privadas nunca devem usar o prefixo `NEXT_PUBLIC_`.
 
 Depois de conectar um projeto, aplique todas as migrations na ordem dos nomes. Elas incluem o catálogo versionado e funções transacionais que recalculam nutrientes no banco antes de salvar refeições ou modelos. A edição preserva a identidade e a origem do registro.
 
+## Migrations automáticas
+
+O workflow `.github/workflows/supabase-migrations.yml` aplica migrations pendentes quando alterações em `supabase/migrations` chegam à branch `main`. No repositório GitHub, cadastre estes *Actions secrets*:
+
+- `SUPABASE_PROJECT_REF`: `orsvkksqluegjpqvemjy`
+- `SUPABASE_ACCESS_TOKEN`: token pessoal do Supabase com acesso ao projeto
+- `SUPABASE_DB_PASSWORD`: senha do banco definida ao criar o projeto
+
+As chaves não ficam no código. O primeiro envio para a branch `main` também aplica todas as migrations atuais, em ordem.
+
 Para habilitar voz, configure `ELEVENLABS_API_KEY` apenas no servidor. O áudio é limitado a 30 segundos, enviado diretamente para transcrição e descartado; somente texto, itens estruturados e métricas mínimas ficam registrados. Hash, limite de uso e reivindicação atômica evitam chamadas duplicadas sequenciais ou concorrentes.
 
 Para habilitar a estimativa assistida por foto, configure `OPENAI_API_KEY` e, opcionalmente, `OPENAI_VISION_MODEL`. A foto é analisada com persistência desativada e não é armazenada pelo VERAZ. Alimentos, faixas de gramatura e correções ficam registrados para avaliação. Consulte `docs/AVALIACAO_REFEICOES_POR_FOTO.md` para o protocolo da amostra de pratos pesados.
