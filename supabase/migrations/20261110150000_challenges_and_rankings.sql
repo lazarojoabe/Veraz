@@ -99,7 +99,7 @@ end;
 $$;
 
 create or replace function public.get_challenge_ranking(p_challenge_id uuid)
-returns table (member_id uuid, display_name text, score integer, position bigint)
+returns table (member_id uuid, display_name text, score integer, rank_position bigint)
 language plpgsql
 security definer
 set search_path = ''

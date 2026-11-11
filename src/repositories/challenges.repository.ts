@@ -24,7 +24,7 @@ export async function getChallengeRanking(challengeId: string): Promise<Challeng
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_challenge_ranking", { p_challenge_id: challengeId });
   if (error) throw new Error("challenge_ranking_unavailable");
-  return (data as Array<{ member_id: string; display_name: string; score: number; position: number }>).map((entry) => ({ memberId: entry.member_id, displayName: entry.display_name, score: Number(entry.score), position: Number(entry.position) }));
+  return (data as Array<{ member_id: string; display_name: string; score: number; rank_position: number }>).map((entry) => ({ memberId: entry.member_id, displayName: entry.display_name, score: Number(entry.score), position: Number(entry.rank_position) }));
 }
 
 export async function createChallengeGroup(input: z.infer<typeof createGroupSchema>) {
