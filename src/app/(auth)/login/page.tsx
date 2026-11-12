@@ -9,8 +9,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const message = params.message;
   const notice =
-    message === "check-email"
-      ? "Conta criada. Confira seu e-mail para confirmar o acesso."
+    message === "account-created"
+      ? "Conta criada. Entre com seu e-mail e senha para continuar."
       : message === "confirmation-error"
         ? "O link de confirmação é inválido ou expirou. Solicite um novo acesso."
         : undefined;

@@ -26,6 +26,6 @@ export async function signup(_: AuthActionState, formData: FormData): Promise<Au
   });
   if (error) return { error: "Não foi possível criar a conta. Tente novamente." };
 
-  if (!data.session) redirect("/login?message=check-email");
+  if (!data.session) redirect("/login?message=account-created");
   redirect("/dashboard");
 }
