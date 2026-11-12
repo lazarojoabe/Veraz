@@ -234,7 +234,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
 
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <Card className="p-5">
-          <div className="mb-2 flex items-center justify-between"><span className="text-xs font-medium text-muted">Buscar no catálogo TACO/TBCA</span><button onClick={() => setCustomOpen(true)} disabled={!connected} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand disabled:text-muted" title={connected ? "Criar alimento" : "Conecte o Supabase"}><PackagePlus size={14} /> Criar alimento</button></div>
+          <div className="mb-2 flex items-center justify-between"><span className="text-xs font-medium text-muted">Buscar no catálogo brasileiro TACO</span><button onClick={() => setCustomOpen(true)} disabled={!connected} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand disabled:text-muted" title={connected ? "Criar alimento" : "Conecte o Supabase"}><PackagePlus size={14} /> Criar alimento</button></div>
           <label className="block">
             <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-white/[0.025] px-3 focus-within:border-brand/40">
               <Search size={18} className="text-muted" />

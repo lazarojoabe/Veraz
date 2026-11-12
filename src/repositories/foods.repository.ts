@@ -1,4 +1,5 @@
 import { searchDemoFoods } from "@/data/foods";
+import { foodSearchTerms } from "@/lib/nutrition/food-search";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { FoodCatalogItem, NutritionUnit } from "@/types/nutrition";
@@ -89,7 +90,7 @@ export async function searchFoods(query: string) {
 
   const supabase = await createClient();
   let request = supabase.from("foods").select(columns).eq("is_active", true).order("name").limit(20);
-  if (query.trim()) request = request.ilike("name", `%${query.trim().replaceAll("%", "\\%")}%`);
+  for (const term of foodSearchTerms(query)) request = request.ilike("search_text", `%${term}%`);
 
   const { data, error } = await request;
   if (error) throw new Error("Não foi possível consultar o catálogo nutricional.");

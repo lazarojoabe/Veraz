@@ -1,4 +1,5 @@
 import type { FoodCatalogItem } from "@/types/nutrition";
+import { foodSearchTerms } from "@/lib/nutrition/food-search";
 
 const TACO_REFERENCE = "TACO 4ª edição, NEPA/Unicamp, valores por 100 g";
 
@@ -178,11 +179,15 @@ export const demoFoods: FoodCatalogItem[] = [
 ];
 
 export function searchDemoFoods(query: string) {
-  const normalized = query.trim().toLocaleLowerCase("pt-BR");
+  const terms = foodSearchTerms(query);
 
-  if (!normalized) return demoFoods;
+  if (!terms.length) return demoFoods;
 
-  return demoFoods.filter((food) =>
-    `${food.name} ${food.preparation ?? ""}`.toLocaleLowerCase("pt-BR").includes(normalized),
-  );
+  return demoFoods.filter((food) => {
+    const text = `${food.name} ${food.preparation ?? ""}`
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLocaleLowerCase("pt-BR");
+    return terms.every((term) => text.includes(term));
+  });
 }
