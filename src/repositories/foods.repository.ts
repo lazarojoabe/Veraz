@@ -10,6 +10,10 @@ type FoodRow = {
   preparation: string | null;
   source: FoodCatalogItem["source"];
   source_reference: string | null;
+  source_url: string | null;
+  brand: string | null;
+  barcode: string | null;
+  review_status: "official" | "reviewed" | "user";
   base_quantity: number | string;
   base_unit: NutritionUnit;
   calories: number | string;
@@ -22,7 +26,7 @@ type FoodRow = {
   density_g_ml: number | string | null;
 };
 
-const columns = "id,name,preparation,source,source_reference,base_quantity,base_unit,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sodium_mg,grams_per_unit,density_g_ml";
+const columns = "id,name,preparation,source,source_reference,source_url,brand,barcode,review_status,base_quantity,base_unit,calories,protein_g,carbohydrates_g,fat_g,fiber_g,sodium_mg,grams_per_unit,density_g_ml";
 const optionalNumber = (value: number | string | null) => (value === null ? null : Number(value));
 
 export function mapFood(row: FoodRow): FoodCatalogItem {
@@ -32,6 +36,10 @@ export function mapFood(row: FoodRow): FoodCatalogItem {
     preparation: row.preparation,
     source: row.source,
     sourceReference: row.source_reference,
+    sourceUrl: row.source_url,
+    brand: row.brand,
+    barcode: row.barcode,
+    reviewStatus: row.review_status,
     baseQuantity: Number(row.base_quantity),
     baseUnit: row.base_unit,
     calories: Number(row.calories),
@@ -57,6 +65,7 @@ export async function createCustomFood(
     fiberG: number | null;
     sodiumMg: number | null;
     gramsPerUnit: number | null;
+    sourceUrl: string | null;
   },
 ) {
   const supabase = await createClient();
@@ -68,6 +77,7 @@ export async function createCustomFood(
       preparation: input.preparation,
       source: "custom",
       source_reference: "Informado pelo usuário",
+      source_url: input.sourceUrl,
       base_quantity: 100,
       base_unit: "g",
       calories: input.calories,
@@ -83,6 +93,65 @@ export async function createCustomFood(
 
   if (error) throw new Error("Não foi possível criar o alimento.");
   return mapFood(data as FoodRow);
+}
+
+export async function createOpenFoodFactsFood(
+  userId: string,
+  input: {
+    barcode: string;
+    name: string;
+    brand: string | null;
+    calories: number;
+    proteinG: number;
+    carbohydratesG: number;
+    fatG: number;
+    fiberG: number | null;
+    sodiumMg: number | null;
+  },
+) {
+  const supabase = await createClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("foods")
+    .select(columns)
+    .eq("user_id", userId)
+    .eq("barcode", input.barcode)
+    .maybeSingle();
+  if (existingError) throw new Error("Não foi possível consultar o alimento pelo código de barras.");
+  if (existing) return mapFood(existing as FoodRow);
+
+  const { data, error } = await supabase
+    .from("foods")
+    .insert({
+      user_id: userId,
+      name: input.name,
+      brand: input.brand,
+      barcode: input.barcode,
+      source: "open_food_facts",
+      source_reference: "Open Food Facts, produto " + input.barcode,
+      source_url: "https://world.openfoodfacts.org/product/" + input.barcode,
+      review_status: "user",
+      base_quantity: 100,
+      base_unit: "g",
+      calories: input.calories,
+      protein_g: input.proteinG,
+      carbohydrates_g: input.carbohydratesG,
+      fat_g: input.fatG,
+      fiber_g: input.fiberG,
+      sodium_mg: input.sodiumMg,
+    })
+    .select(columns)
+    .single();
+
+  if (error) throw new Error("Não foi possível salvar o produto encontrado.");
+  return mapFood(data as FoodRow);
+}
+
+export async function suggestFoodForCatalog(userId: string, foodId: string, sourceUrl: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("food_catalog_suggestions")
+    .upsert({ food_id: foodId, user_id: userId, source_url: sourceUrl }, { onConflict: "food_id,user_id" });
+  if (error) throw new Error("Não foi possível enviar a sugestão para revisão.");
 }
 
 export async function searchFoods(query: string) {

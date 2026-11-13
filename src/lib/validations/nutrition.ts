@@ -41,6 +41,8 @@ export const customFoodSchema = z.object({
   fiberG: z.number().nonnegative().max(200).nullable().default(null),
   sodiumMg: z.number().nonnegative().max(100000).nullable().default(null),
   gramsPerUnit: z.number().positive().max(10000).nullable().default(null),
+  sourceUrl: z.url().max(500).nullable().default(null),
+  suggestForCatalog: z.boolean().default(false),
 });
 
 export const mealTemplateSchema = z.object({

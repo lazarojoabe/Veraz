@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerUserId } from "@/lib/auth/server-user";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { searchFoods } from "@/repositories/foods.repository";
-import { createCustomFood } from "@/repositories/foods.repository";
+import { createCustomFood, searchFoods, suggestFoodForCatalog } from "@/repositories/foods.repository";
 import { customFoodSchema } from "@/lib/validations/nutrition";
 
 export async function GET(request: NextRequest) {
@@ -29,7 +28,9 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_food", issues: parsed.error.flatten() }, { status: 400 });
 
   try {
-    return NextResponse.json({ food: await createCustomFood(userId, parsed.data) }, { status: 201 });
+    const food = await createCustomFood(userId, parsed.data);
+    if (parsed.data.suggestForCatalog) await suggestFoodForCatalog(userId, food.id, parsed.data.sourceUrl);
+    return NextResponse.json({ food, suggested: parsed.data.suggestForCatalog }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "food_save_failed" }, { status: 500 });
   }

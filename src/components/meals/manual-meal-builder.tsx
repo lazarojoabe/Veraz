@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, LoaderCircle, PackagePlus, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { Barcode, Check, ChevronRight, LoaderCircle, PackagePlus, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { demoFoods, searchDemoFoods } from "@/data/foods";
@@ -26,6 +26,14 @@ const unitLabels: Record<NutritionUnit, string> = {
   portion: "porção",
 };
 
+const sourceLabels: Record<FoodCatalogItem["source"], string> = {
+  taco: "TACO",
+  tbca: "TBCA",
+  verified: "Veraz revisado",
+  open_food_facts: "Rótulo · Open Food Facts",
+  custom: "Base própria",
+};
+
 const mealTypes = [
   ["breakfast", "Café da manhã"],
   ["lunch", "Almoço"],
@@ -45,10 +53,11 @@ function formatNumber(value: number, maximumFractionDigits = 1) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits }).format(value);
 }
 
-const emptyCustomFood = { name: "", preparation: "", calories: 0, proteinG: 0, carbohydratesG: 0, fatG: 0, fiberG: 0, sodiumMg: 0, gramsPerUnit: 0 };
+const emptyCustomFood = { name: "", preparation: "", calories: 0, proteinG: 0, carbohydratesG: 0, fatG: 0, fiberG: 0, sodiumMg: 0, gramsPerUnit: 0, sourceUrl: "", suggestForCatalog: false };
 
 export function ManualMealBuilder({ connected, editId }: { connected: boolean; editId?: string }) {
   const [query, setQuery] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [foods, setFoods] = useState<FoodCatalogItem[]>(connected ? [] : demoFoods);
   const [lines, setLines] = useState<Line[]>([]);
   const [loadingFoods, setLoadingFoods] = useState(connected);
@@ -62,6 +71,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
   const [customOpen, setCustomOpen] = useState(false);
   const [customFood, setCustomFood] = useState(emptyCustomFood);
   const [savingCustom, setSavingCustom] = useState(false);
+  const [lookingUpBarcode, setLookingUpBarcode] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => {
@@ -133,6 +143,30 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
     setStatus(null);
   }
 
+  async function lookupBarcode() {
+    const normalizedBarcode = barcode.replaceAll(/[^0-9]/g, "");
+    if (normalizedBarcode.length < 8 || normalizedBarcode.length > 14) {
+      setStatus({ kind: "error", message: "Informe um código de barras com 8 a 14 dígitos." });
+      return;
+    }
+
+    setLookingUpBarcode(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/nutrition/barcode/" + normalizedBarcode);
+      const payload = (await response.json().catch(() => null)) as { food?: FoodCatalogItem; message?: string } | null;
+      if (!response.ok || !payload?.food) throw new Error(payload?.message ?? "Produto não encontrado.");
+      setFoods((current) => [payload.food!, ...current.filter((food) => food.id !== payload.food!.id)]);
+      addFood(payload.food);
+      setBarcode("");
+      setStatus({ kind: "success", message: "Produto do rótulo adicionado à refeição. Confira os valores antes de salvar." });
+    } catch (error) {
+      setStatus({ kind: "error", message: (error as Error).message });
+    } finally {
+      setLookingUpBarcode(false);
+    }
+  }
+
   function updateLine(key: string, patch: Partial<Pick<Line, "quantity" | "unit">>) {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
   }
@@ -168,6 +202,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
   async function createFood() {
     setSavingCustom(true);
     setStatus(null);
+    const wasSuggested = customFood.suggestForCatalog;
     try {
       const response = await fetch("/api/nutrition", {
         method: "POST",
@@ -178,6 +213,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
           fiberG: customFood.fiberG || null,
           sodiumMg: customFood.sodiumMg || null,
           gramsPerUnit: customFood.gramsPerUnit || null,
+          sourceUrl: customFood.sourceUrl || null,
         }),
       });
       if (!response.ok) throw new Error();
@@ -186,7 +222,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
       addFood(food);
       setCustomFood(emptyCustomFood);
       setCustomOpen(false);
-      setStatus({ kind: "success", message: "Alimento personalizado criado e adicionado." });
+      setStatus({ kind: "success", message: wasSuggested ? "Alimento criado e enviado para revisão do catálogo." : "Alimento personalizado criado e adicionado." });
     } catch {
       setStatus({ kind: "error", message: "Não foi possível criar o alimento personalizado." });
     } finally {
@@ -234,7 +270,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
 
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <Card className="p-5">
-          <div className="mb-2 flex items-center justify-between"><span className="text-xs font-medium text-muted">Buscar no catálogo brasileiro TACO</span><button onClick={() => setCustomOpen(true)} disabled={!connected} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand disabled:text-muted" title={connected ? "Criar alimento" : "Conecte o Supabase"}><PackagePlus size={14} /> Criar alimento</button></div>
+          <div className="mb-2 flex items-center justify-between"><span className="text-xs font-medium text-muted">Buscar no catálogo brasileiro</span><button onClick={() => setCustomOpen(true)} disabled={!connected} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand disabled:text-muted" title={connected ? "Criar alimento" : "Conecte o Supabase"}><PackagePlus size={14} /> Criar alimento</button></div>
           <label className="block">
             <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-white/[0.025] px-3 focus-within:border-brand/40">
               <Search size={18} className="text-muted" />
@@ -242,6 +278,14 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
               {loadingFoods && <LoaderCircle size={16} className="animate-spin text-brand" />}
             </span>
           </label>
+          <div className="mt-3 flex gap-2">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-white/[0.025] px-3 focus-within:border-brand/40">
+              <Barcode size={16} className="shrink-0 text-muted" />
+              <input value={barcode} onChange={(event) => setBarcode(event.target.value)} inputMode="numeric" maxLength={14} className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted/45" placeholder="Código de barras" />
+            </label>
+            <Button variant="secondary" className="h-10 px-3 text-xs" disabled={!connected || lookingUpBarcode} onClick={lookupBarcode}>{lookingUpBarcode ? <LoaderCircle size={15} className="animate-spin" /> : "Buscar"}</Button>
+          </div>
+          <p className="mt-2 text-[10px] leading-4 text-muted">Produtos por código de barras usam o rótulo do Open Food Facts e ficam na sua base pessoal.</p>
 
           <div className="mt-4 max-h-[27rem] space-y-2 overflow-y-auto pr-1">
             {!loadingFoods && displayedFoods.length === 0 && <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-muted">Nenhum alimento encontrado.</p>}
@@ -250,7 +294,7 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-deep/40 text-brand"><Plus size={16} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{food.name}</span>
-                  <span className="mt-0.5 block truncate text-[11px] text-muted">{food.preparation ?? "Referência padrão"} · {food.source.toUpperCase()}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-muted">{food.preparation ?? "Referência padrão"} · {sourceLabels[food.source]}</span>
                 </span>
                 <span className="text-right text-xs"><strong>{formatNumber(food.calories, 0)}</strong><span className="block text-[10px] text-muted">kcal/{food.baseQuantity} {unitLabels[food.baseUnit]}</span></span>
               </button>
@@ -321,7 +365,9 @@ export function ManualMealBuilder({ connected, editId }: { connected: boolean; e
               <CustomInput label="Fibras (g, opcional)" value={customFood.fiberG} onChange={(value) => setCustomFood((current) => ({ ...current, fiberG: Number(value) }))} />
               <CustomInput label="Sódio (mg, opcional)" value={customFood.sodiumMg} onChange={(value) => setCustomFood((current) => ({ ...current, sodiumMg: Number(value) }))} />
               <CustomInput label="Gramas por unidade (opcional)" value={customFood.gramsPerUnit} onChange={(value) => setCustomFood((current) => ({ ...current, gramsPerUnit: Number(value) }))} />
+              <CustomInput label="Link do rótulo (opcional)" value={customFood.sourceUrl} onChange={(value) => setCustomFood((current) => ({ ...current, sourceUrl: value }))} text />
             </div>
+            <label className="mt-4 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={customFood.suggestForCatalog} onChange={(event) => setCustomFood((current) => ({ ...current, suggestForCatalog: event.target.checked }))} className="mt-0.5 accent-emerald-500" /> <span>Enviar este alimento para revisão e possível inclusão no catálogo Veraz.</span></label>
             <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCustomOpen(false)}>Cancelar</Button><Button onClick={createFood} disabled={savingCustom || customFood.name.trim().length < 2}>{savingCustom && <LoaderCircle size={16} className="animate-spin" />} Criar e adicionar</Button></div>
           </Card>
         </div>

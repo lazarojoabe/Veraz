@@ -15,8 +15,12 @@ export type FoodCatalogItem = NutritionValues & {
   id: string;
   name: string;
   preparation: string | null;
-  source: "taco" | "tbca" | "custom";
+  source: "taco" | "tbca" | "verified" | "open_food_facts" | "custom";
   sourceReference: string | null;
+  sourceUrl?: string | null;
+  brand?: string | null;
+  barcode?: string | null;
+  reviewStatus?: "official" | "reviewed" | "user";
   baseQuantity: number;
   baseUnit: NutritionUnit;
   gramsPerUnit: number | null;
