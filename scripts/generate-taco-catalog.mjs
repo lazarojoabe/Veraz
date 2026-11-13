@@ -29,6 +29,7 @@ const sqlNumber = (value, field, food) => {
 };
 const sqlRequiredNumber = (value, field, food) => {
   if (value === null || value === undefined) return "0";
+  if (Number(value) < 0) return "0";
   return sqlNumber(value, field, food);
 };
 
@@ -69,8 +70,9 @@ const rows = foods.map((food) => {
   const id = existingFoodIds.get(food.id) ?? tacoUuid(food.id);
   const reference = `TACO 4ª edição, NEPA/Unicamp, valores por 100 g, alimento ${food.id}`;
   // A TACO deixa nutrientes sem ocorrência em branco (por exemplo, proteína
-  // em óleos). A coluna interna é obrigatória para os cálculos de refeições,
-  // então estes casos entram como zero, sem inventar um valor nutricional.
+  // em óleos) e possui quatro valores negativos de carboidrato por variação
+  // analítica. A coluna interna é obrigatória e não aceita negativos, então
+  // esses casos entram como zero, sem inventar valor nutricional.
   return `  (${sqlString(id)}, ${sqlString(food.description)}, null, 'taco', ${sqlString(reference)}, 100, 'g', ${sqlRequiredNumber(food.energy_kcal, "energy_kcal", food)}, ${sqlRequiredNumber(food.protein_g, "protein_g", food)}, ${sqlRequiredNumber(food.carbohydrate_g, "carbohydrate_g", food)}, ${sqlRequiredNumber(food.lipids_g, "lipids_g", food)}, ${sqlNumber(food.dietary_fiber_g, "dietary_fiber_g", food)}, ${sqlNumber(food.sodium_mg, "sodium_mg", food)}, ${sqlNumber(gramsPerUnit.get(food.id), "grams_per_unit", food)}, null)`;
 });
 
