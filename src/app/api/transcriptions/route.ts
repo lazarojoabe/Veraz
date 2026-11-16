@@ -41,20 +41,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_duration" }, { status: 400 });
   }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const hash = createHash("sha256").update(bytes).digest("hex");
-  const cached = await findCompletedTranscription(userId, hash);
-  if (cached) {
-    const structured = cached.structured_items as StructuredItems;
-    const foods = await getFoodsByIds(structured.items.map((item) => item.foodId));
-    return NextResponse.json({ transcript: cached.transcript, ...structured, foods, cached: true });
-  }
-  if (!(await canStartTranscription(userId))) {
-    return NextResponse.json({ error: "rate_limited", message: "Aguarde alguns minutos antes de enviar outro áudio." }, { status: 429 });
-  }
-
   let auditId: string | null = null;
   try {
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    const cached = await findCompletedTranscription(userId, hash);
+    if (cached) {
+      const structured = cached.structured_items as StructuredItems;
+      const foods = await getFoodsByIds(structured.items.map((item) => item.foodId));
+      return NextResponse.json({ transcript: cached.transcript, ...structured, foods, cached: true });
+    }
+    if (!(await canStartTranscription(userId))) {
+      return NextResponse.json({ error: "rate_limited", message: "Aguarde alguns minutos antes de enviar outro áudio." }, { status: 429 });
+    }
+
     const claim = await claimTranscription(userId, hash, duration, file.size);
     if (!claim.claimed) {
       if (claim.status === "completed" && claim.transcript && claim.structuredItems) {
@@ -72,7 +72,17 @@ export async function POST(request: NextRequest) {
     const foods = catalog.filter((food) => structured.items.some((item) => item.foodId === food.id));
     return NextResponse.json({ transcript: transcript.text, ...structured, foods, cached: false });
   } catch (error) {
-    if (auditId) await failTranscription(auditId, (error as Error).message);
+    const code = (error as Error).message;
+    if (auditId) await failTranscription(auditId, code);
+    if (code === "transcription_audit_failed" || code === "transcription_rate_check_failed") {
+      return NextResponse.json({ error: "transcription_feature_migration_required", message: "A estrutura do recurso de voz ainda não foi aplicada ao banco." }, { status: 503 });
+    }
+    if (code === "transcription_provider_401" || code === "transcription_provider_403") {
+      return NextResponse.json({ error: "transcription_provider_configuration", message: "A configuração da ElevenLabs precisa ser revisada no servidor." }, { status: 503 });
+    }
+    if (code === "transcription_provider_429") {
+      return NextResponse.json({ error: "transcription_provider_rate_limited", message: "O limite da ElevenLabs foi atingido. Tente novamente em alguns instantes." }, { status: 429 });
+    }
     return NextResponse.json({ error: "transcription_failed", message: "Não foi possível transcrever este áudio. Tente novamente." }, { status: 502 });
   }
 }

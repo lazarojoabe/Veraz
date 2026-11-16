@@ -51,6 +51,6 @@ O workflow `.github/workflows/supabase-migrations.yml` aplica migrations pendent
 
 As chaves não ficam no código. O primeiro envio para a branch `main` também aplica todas as migrations atuais, em ordem.
 
-Para habilitar voz, configure `ELEVENLABS_API_KEY` apenas no servidor. O áudio é limitado a 30 segundos, enviado diretamente para transcrição e descartado; somente texto, itens estruturados e métricas mínimas ficam registrados. Hash, limite de uso e reivindicação atômica evitam chamadas duplicadas sequenciais ou concorrentes.
+Para habilitar voz, configure `ELEVENLABS_API_KEY` apenas no servidor e mantenha as migrations aplicadas. Também é necessário que a conta ElevenLabs tenha créditos ou franquia de Speech to Text e que o navegador tenha acesso ao microfone em contexto seguro (HTTPS, como o deploy da Vercel). O áudio é limitado a 30 segundos, enviado diretamente para transcrição e descartado; somente texto, itens estruturados e métricas mínimas ficam registrados. Hash, limite de uso e reivindicação atômica evitam chamadas duplicadas sequenciais ou concorrentes.
 
 Para habilitar a estimativa assistida por foto, configure `OPENAI_API_KEY` e, opcionalmente, `OPENAI_VISION_MODEL`. A foto é analisada com persistência desativada e não é armazenada pelo VERAZ. Alimentos, faixas de gramatura e correções ficam registrados para avaliação. Consulte `docs/AVALIACAO_REFEICOES_POR_FOTO.md` para o protocolo da amostra de pratos pesados.

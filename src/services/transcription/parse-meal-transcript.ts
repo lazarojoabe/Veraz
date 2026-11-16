@@ -17,8 +17,13 @@ const wordNumbers: Record<string, number> = {
 
 const quantityPattern = Object.keys(wordNumbers).sort((a, b) => b.length - a.length).join("|");
 const itemPattern = new RegExp(
-  `^(${quantityPattern}|\\d+(?:[.,]\\d+)?)\\s*(quilogramas|quilograma|mililitros|mililitro|unidades|unidade|gramas|grama|quilos|quilo|porcoes|porcao|kg|ml|g)?\\s*(?:de\\s+)?(.*)$`,
+  `^(${quantityPattern}|\\d+(?:[.,]\\d+)?)\\s*(quilogramas|quilograma|mililitros|mililitro|unidades|unidade|gramas|grama|quilos|quilo|porcoes|porcao|fatias|fatia|kg|ml|g)?\\s*(?:de\\s+)?(.*)$`,
 );
+
+const ignoredFoodWords = new Set([
+  "a", "as", "ao", "aos", "com", "da", "das", "de", "do", "dos", "e", "em", "na", "nas", "no", "nos", "ou",
+]);
+const preparationWords = new Set(["assado", "assada", "cozido", "cozida", "cru", "crua", "frito", "frita", "grelhado", "grelhada"]);
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/[^a-z0-9,. ]/g, " ").replace(/\s+/g, " ").trim();
@@ -29,33 +34,60 @@ function parseQuantity(raw: string) {
   return wordNumbers[normalized] ?? Number(normalized.replace(",", "."));
 }
 
+function canonicalToken(value: string) {
+  return value.endsWith("s") && value.length > 3 ? value.slice(0, -1) : value;
+}
+
+function foodTokens(value: string) {
+  return normalize(value)
+    .split(" ")
+    .map(canonicalToken)
+    .filter((token) => token.length >= 3 && !ignoredFoodWords.has(token));
+}
+
 function unitFromSpeech(raw: string | undefined, quantity: number) {
   const value = normalize(raw ?? "g");
   if (["kg", "quilo", "quilos", "quilograma", "quilogramas"].includes(value)) return { quantity: quantity * 1000, unit: "g" as const };
   if (["ml", "mililitro", "mililitros"].includes(value)) return { quantity, unit: "ml" as const };
-  if (["unidade", "unidades", "ovo", "ovos"].includes(value)) return { quantity, unit: "unit" as const };
+  if (["unidade", "unidades", "fatia", "fatias", "ovo", "ovos"].includes(value)) return { quantity, unit: "unit" as const };
   if (["porcao", "porcoes"].includes(value)) return { quantity, unit: "portion" as const };
   return { quantity, unit: "g" as const };
 }
 
 function matchFood(description: string, foods: FoodCatalogItem[]) {
-  const haystack = normalize(description);
-  const aliases: Record<string, string[]> = {
-    arroz: ["arroz"], feijao: ["feijao"], frango: ["frango", "peito"], ovo: ["ovo"],
-    banana: ["banana"], pao: ["pao"], queijo: ["queijo"], batata: ["batata"], aveia: ["aveia"],
-  };
+  const requested = foodTokens(description);
+  const requestedSet = new Set(requested);
+  const requestedPreparation = requested.filter((token) => preparationWords.has(token));
 
   return foods
     .map((food) => {
-      const foodText = normalize(`${food.name} ${food.preparation ?? ""}`);
-      const meaningful = foodText.split(" ").filter((word) => word.length >= 4);
-      let score = meaningful.filter((word) => haystack.includes(word)).length;
-      for (const [key, values] of Object.entries(aliases)) {
-        if (foodText.includes(key) && values.some((alias) => haystack.includes(alias))) score += 2;
+      const tokens = foodTokens(`${food.name} ${food.preparation ?? ""}`);
+      const tokenSet = new Set(tokens);
+      const matched = requested.filter((token) => tokenSet.has(token));
+      let score = matched.length * 2;
+
+      // Prefer a sensible default only when the person mentioned a generic egg.
+      // This keeps "dois ovos" from being resolved as quail egg, egg white, or yolk.
+      if (requestedSet.has("ovo")) {
+        if (tokenSet.has("galinha")) score += 1.4;
+        if (tokenSet.has("inteiro")) score += 0.9;
+        if (tokenSet.has("cozido")) score += 0.4;
+        if (tokenSet.has("codorna") || tokenSet.has("clara") || tokenSet.has("gema")) score -= 1.2;
       }
+
+      if (requestedSet.has("pao") && requestedSet.has("forma") && tokenSet.has("forma")) score += 1.2;
+      if (requestedSet.has("arroz") && !requestedSet.has("integral")) {
+        if (tokenSet.has("tipo")) score += 0.8;
+        if (tokenSet.has("integral")) score -= 0.6;
+      }
+      if (requestedPreparation.length) {
+        score += requestedPreparation.filter((token) => tokenSet.has(token)).length;
+        score -= requestedPreparation.filter((token) => !tokenSet.has(token)).length * 0.6;
+      }
+
       return { food, score };
     })
-    .sort((a, b) => b.score - a.score)[0];
+    .sort((a, b) => b.score - a.score || Number(Boolean(b.food.gramsPerUnit)) - Number(Boolean(a.food.gramsPerUnit)) || a.food.name.localeCompare(b.food.name, "pt-BR"))[0];
 }
 
 export function parseMealTranscript(transcript: string, foods: FoodCatalogItem[]) {

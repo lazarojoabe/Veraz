@@ -43,6 +43,27 @@ describe("parseMealTranscript", () => {
     expect(result.items[0]).toMatchObject({ quantity: 12, unit: "unit" });
   });
 
+  it("prefers the standard chicken whole egg and its reliable unit conversion", () => {
+    const chickenEgg = { ...demoFoods.find((food) => food.name.startsWith("Ovo"))!, id: "10000000-0000-4000-8000-000000000098" };
+    const eggs = [
+      { ...chickenEgg, id: "10000000-0000-4000-8000-000000000097", name: "Ovo de codorna inteiro", gramsPerUnit: null },
+      chickenEgg,
+      { ...chickenEgg, id: "10000000-0000-4000-8000-000000000096", name: "Ovo de galinha clara", gramsPerUnit: null },
+    ];
+    const result = parseMealTranscript("dois ovos", eggs);
+
+    expect(result.unresolved).toEqual([]);
+    expect(result.items).toMatchObject([{ foodId: eggs[1].id, quantity: 2, unit: "unit" }]);
+  });
+
+  it("understands slices when the catalog has a reliable grams-per-slice factor", () => {
+    const bread = { ...demoFoods[0], id: "10000000-0000-4000-8000-000000000099", name: "Pão de forma tradicional", gramsPerUnit: 25 };
+    const result = parseMealTranscript("duas fatias de pão de forma", [bread]);
+
+    expect(result.unresolved).toEqual([]);
+    expect(result.items).toMatchObject([{ foodId: bread.id, quantity: 2, unit: "unit" }]);
+  });
+
   it("keeps unmatched content explicit", () => {
     const result = parseMealTranscript("um prato misterioso", demoFoods);
     expect(result.items).toHaveLength(0);

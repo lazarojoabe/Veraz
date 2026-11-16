@@ -68,4 +68,15 @@ describe("POST /api/transcriptions", () => {
     await expect(response.json()).resolves.toMatchObject({ error: "transcription_in_progress" });
     expect(mocks.transcribeWithElevenLabs).not.toHaveBeenCalled();
   });
+
+  it("explica quando a chave da ElevenLabs precisa ser revisada", async () => {
+    mocks.findCompletedTranscription.mockResolvedValue(null);
+    mocks.claimTranscription.mockResolvedValue({ id: "audit-id", claimed: true, status: "processing" });
+    mocks.transcribeWithElevenLabs.mockRejectedValue(new Error("transcription_provider_401"));
+
+    const response = await POST(audioRequest());
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: "transcription_provider_configuration" });
+    expect(mocks.failTranscription).toHaveBeenCalledWith("audit-id", "transcription_provider_401");
+  });
 });

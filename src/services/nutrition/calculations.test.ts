@@ -25,6 +25,23 @@ describe("nutrition calculations", () => {
     expect(calculateMealItem(banana, { foodId: banana.id, quantity: 1, unit: "unit" }).calories).toBe(70.85);
   });
 
+  it("calculates calories for common portions such as eggs and bread slices", () => {
+    const egg = demoFoods.find((food) => food.name.startsWith("Ovo"))!;
+    const bread = {
+      ...demoFoods[0],
+      id: "10000000-0000-4000-8000-000000000099",
+      name: "Pão de forma tradicional",
+      calories: 250,
+      proteinG: 8.6,
+      carbohydratesG: 44,
+      fatG: 4.4,
+      gramsPerUnit: 25,
+    };
+
+    expect(calculateMealItem(egg, { foodId: egg.id, quantity: 2, unit: "unit" }).calories).toBe(146);
+    expect(calculateMealItem(bread, { foodId: bread.id, quantity: 2, unit: "unit" }).calories).toBe(125);
+  });
+
   it("rejects unsupported conversions instead of guessing", () => {
     const rice = demoFoods[0];
     expect(() => convertToBaseQuantity(rice, 1, "unit")).toThrow(/indisponível/);
